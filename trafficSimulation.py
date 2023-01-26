@@ -18,12 +18,12 @@ defaultStop = {'right': 580, 'down': 320, 'left': 810, 'up': 545}
 stoppingGap = 15    # stopping gap
 movingGap = 15   # moving gap
 driverAssigned = False # represents whether there is one car responsible for looking and responding to traffic signs
-
+collisionCount = 0
 
 
 #initializing pygame
 pygame.init()
-simulation = pygame.sprite.Group()
+simulation = []
 
 class Vehicle(pygame.sprite.Sprite):
     def __init__(self, lane, vehicleType, direction_number, direction):
@@ -43,6 +43,7 @@ class Vehicle(pygame.sprite.Sprite):
         path = "images/" + direction + "/" + vehicleType + ".png" 
         self.image = pygame.image.load(path)
         self.stop = 0
+        self.vehicleRect = self.image.get_rect(topleft = [self.x, self.y])
         
         #checks if there are cars in same lane and direction as current vehicle 
         # if so we need to set the value of stop and consider width and height 
@@ -72,60 +73,74 @@ class Vehicle(pygame.sprite.Sprite):
             elif(direction=='up'):
                 temp = self.image.get_rect().height + stoppingGap
                 y[direction][lane] += temp
-            simulation.add(self)
+            simulation.append(self)
     # to make sure to update the position of the vehicle
     def render(self, screen):
         screen.blit(self.image, (self.x, self.y)) 
     
-    def collisionDetection(self, veh_xCord, veh_yCord):
-        if self.x in veh_xCord:
-            #terminate the simulation by pausing it for a year 
-            # NOTE: if possible find the way to permenantly pause the simulation 
-            # rather than for set amount of time 
-            print("X coordinate matches another x coordinate")
-            pygame.time.delay(31536000000) # keep the simulation paused for a year if vehicles collide 
-        elif self.y in veh_yCord:
-            #terminate the simulation by pausing it 
-            # NOTE: if possible find the way to permenantly pause the simulation 
-            # rather than for set amount of time
-            print("Y coordinate matches another y coordinate")
-            pygame.time.delay(31536000000) # keep the simulation paused for a year if vehicles collide
-        veh_xCord.append(self.x)
-        veh_yCord.append(self.y)
+
     
     #updating the coordinates of each vehicle so that simulation has moving vehicles
     def move(self):
         if(self.direction == 'right'):
             self.x += self.speed #update the position of the vehicles that are moving right to keep moving right
+            self.vehicleRect.right += self.speed
+            #self.image.get_rect().right += self.speed
         elif(self.direction == 'left'):
             self.x -= self.speed #update the position of the vehicles that are moving left to keep moving left 
+            self.vehicleRect.right -= self.speed 
+            #self.image.get_rect().right -= self.speed
         elif(self.direction == 'down'):
             self.y += self.speed #update position of vehicles moving down to continue to move down 
+            self.vehicleRect.bottom += self.speed
+            #self.image.get_rect().top -= self.speed
         elif(self.direction == 'up'):
             self.y -= self.speed #update position of vehicles moving up to continue to move up 
-        #self.collisionDetection()
+            self.vehicleRect.bottom -= self.speed
+            #self.image.get_rect().top += self.speed
+        #if self.x <0 or self.x > 1400 or self.y < 0 or self.y > 800:
+            #simulation.remove(self)
+        self.collisionDetection()
     
     #def updateVehicleCount(self):
     '''
     idea is the following
-    1) if vehicle is moving upwards/downwards but exceeds the y coordinate that is displayable remove it from the simulation array 
-    2) if vehicle is moving left/right but exceeds the x coordinate that is displayable remove it from the simulation array
+    1) pygame's collision detection applies on rectangle objects 
+    2) each vehicle's vehicleRect attribute is the rectangle object to use for collision detection among all vehicles
+    3) each vehicle image (vehicle.image) is connected to its rectangle object (vehicle.vehicleRect) -- specifically the screen.blit part in the main class 
     '''
         
-            
-    
     def collisionDetection(self):
-        #PROBLEM: simulation keeps vehicles that have also left the screen 
-        # once a vehicle has left the screen need to remove it from the 
-        # simulation array before checking for colliding rectangles
+        #Here we have two working versions commented below 
+        # the first one uses pygame's collidelist function 
+        # the second one uses the pygame's colliderect function
+        # idea is to figure out which one is faster and keep that one 
+        # first one should appear to be faster because O(2n) time complexity vs O(n^2)
         
-        
-        for v1 in simulation:
-            for v2 in simulation:
-                if v1 != v2:
-                    if v1.x == v2.x or v1.y == v2.y:
-                        print("waiting")
-                        pygame.time.wait(31536000000)  
+        global collisionCount
+        # following two arrays are supposed to be indexed the same 
+        # meaning that index 1 in veh_list (the vehicle) will correspond to index 1 in veh_rectlist (the vehicle's rectangle)
+        veh_list = []
+        veh_rectlist = []
+        for vehicle in simulation:
+            veh_list.append(vehicle)
+            veh_rectlist.append(vehicle.vehicleRect)
+        for vehicle in simulation:
+            collisions = vehicle.vehicleRect.collidelist(veh_rectlist)
+            if collisions != -1 and vehicle != veh_list[collisions]:
+                print('collision')
+                sys.exit()
+        '''
+        global collisionCount
+        for vehicle in simulation:
+            for compare in simulation:
+                if vehicle != compare:
+                    collide = pygame.Rect.colliderect(vehicle.vehicleRect, compare.vehicleRect)
+                    if collide:
+                        print('Collided')
+                        sys.exit()
+        '''
+                                              
 class Main:
     def generateVehicles():
         while(True):
@@ -143,7 +158,7 @@ class Main:
             elif(temp<dist[3]):
                 direction_number = 3
             Vehicle(lane_number, vehicleTypes[vehicle_type], direction_number, directionNumbers[direction_number])
-            time.sleep(1)
+            time.sleep(0.2)
     
     black = (0, 0, 0)
     white = (255, 255, 255) 
@@ -166,8 +181,9 @@ class Main:
                 sys.exit()
         
         screen.blit(background, (0, 0))
-        for vehicle in simulation:  
-            screen.blit(vehicle.image, [vehicle.x, vehicle.y])
+        for vehicle in simulation: 
+            screen.blit(vehicle.image, vehicle.vehicleRect)
             vehicle.move()
+            
         pygame.display.update()
         
