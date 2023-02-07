@@ -23,7 +23,6 @@ collisionCount = 0 # counts the number of collisions in trials
 totalTrials = 0 # counts the total number of simulation trials (so that we can add percentage of trials that have a collison )
 
 
-
 #initializing pygame
 pygame.init()
 simulation = []
@@ -48,6 +47,7 @@ class Vehicle(pygame.sprite.Sprite):
         self.stop = 0
         self.vehicleRect = self.image.get_rect(topleft = [self.x, self.y])
         self.waiting = 0
+        
         
         #checks if there are cars in same lane and direction as current vehicle 
         # if so we need to set the value of stop and consider width and height 
@@ -197,6 +197,7 @@ class Vehicle(pygame.sprite.Sprite):
 class Main:
     def generateVehicles():
         while(True):
+            carDown = False
             vehicle_type = random.randint(0,3) # the random vehicle created
             lane_number = random.randint(1,2) # the lane in particular direction 
             temp = random.randint(0,99)
@@ -214,10 +215,18 @@ class Main:
             # all cars should be moving downward (only cars will be detecting and predicting traffic signs)
             if vehicle_type == 0:
                 direction_number = 1
-                
-            Vehicle(lane_number, vehicleTypes[vehicle_type], direction_number, directionNumbers[direction_number])
-
-            time.sleep(0.1)
+            # checking if there is a car moving downwards in the simulation - if so, don't want to create another car 
+            for vehicle in simulation: 
+                if vehicle.vehicleType == 'car':
+                    carDown = True
+                    break
+            #print(f'Found a vehicle in simulation going downwards {carDown}')
+            # render all vehicles if they aren't a car and only render cars if there isn't one currently going downwards 
+            if vehicle_type != 0:
+                Vehicle(lane_number, vehicleTypes[vehicle_type], direction_number, directionNumbers[direction_number])
+            elif not carDown:
+                Vehicle(lane_number, vehicleTypes[vehicle_type], direction_number, directionNumbers[direction_number])
+            time.sleep(0.05)
     
     # the driving force behind coordinating the display of our simulation 
     thread2 = threading.Thread(name="generateVehicles",target=generateVehicles, args=())
