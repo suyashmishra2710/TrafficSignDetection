@@ -18,7 +18,10 @@ defaultStop = {'right': 580, 'down': 320, 'left': 810, 'up': 545}
 stoppingGap = 15    # stopping gap
 movingGap = 15   # moving gap
 driverAssigned = False # represents whether there is one car responsible for looking and responding to traffic signs
-collisionCount = 0
+simulation_over = 0 # 0 for when simulation is still running, 1 for when simulation is over 
+collisionCount = 0 # counts the number of collisions in trials 
+totalTrials = 0 # counts the total number of simulation trials (so that we can add percentage of trials that have a collison )
+
 
 
 #initializing pygame
@@ -44,6 +47,7 @@ class Vehicle(pygame.sprite.Sprite):
         self.image = pygame.image.load(path)
         self.stop = 0
         self.vehicleRect = self.image.get_rect(topleft = [self.x, self.y])
+        self.waiting = 0
         
         #checks if there are cars in same lane and direction as current vehicle 
         # if so we need to set the value of stop and consider width and height 
@@ -78,28 +82,70 @@ class Vehicle(pygame.sprite.Sprite):
     def render(self, screen):
         screen.blit(self.image, (self.x, self.y)) 
     
-
+    # below are functions for different responses the car going downwards may carry out 
+    # as it is approaching/predicting a traffic sign 
     
+    # appropriate response if the car is predicting there to be a stop sign 
+    def stopResponse(self):
+        if abs(self.y - 350) > 50 or self.waiting > 100:
+            self.y += self.speed #update position of vehicles moving down to continue to move down 
+            self.vehicleRect.bottom += self.speed 
+        else:
+            self.waiting += 1
+            
+    #appropriate response if the car is predicting there to be a yield sign 
+    def yieldResponse(self):
+        if abs(self.y - 350) > 100 or self.waiting > 100:
+            self.y += self.speed
+            self.vehicleRect.bottom += self.speed
+        else:
+            self.y += self.speed / 2
+            self.vehicleRect.bottom += self.speed / 2
+            self.waiting += 1
+    
+    # appropriate response to a speed limit sign (if car is going to far below the speed limit)
+    def speedUpResponse(self):
+        if self.y - 350 < -50:
+            self.y += self.speed 
+            self.vehicleRect.bottom += self.speed 
+        else:
+            self.y += self.speed * 3
+            self.vehicleRect.bottom += (self.speed * 3)
+    
+    # appropriate response to a speed limit sign (if car is going to far above the speed limit)  
+    def slowDownResponse(self):
+        if self.y - 350 < -50:
+            self.y += self.speed 
+            self.vehicleRect.bottom += self.speed 
+        else:
+            self.y += (self.speed / 2)
+            self.vehicleRect.bottom += (self.speed / 2)
+    
+    #normal response -- car keeps moving 
+    def normalResponse(self):
+        self.y += self.speed 
+        self.vehicleRect.bottom += self.speed
+    
+        
     #updating the coordinates of each vehicle so that simulation has moving vehicles
     def move(self):
         if(self.direction == 'right'):
             self.x += self.speed #update the position of the vehicles that are moving right to keep moving right
-            self.vehicleRect.right += self.speed
-            #self.image.get_rect().right += self.speed
+            self.vehicleRect.right += self.speed    
         elif(self.direction == 'left'):
             self.x -= self.speed #update the position of the vehicles that are moving left to keep moving left 
             self.vehicleRect.right -= self.speed 
-            #self.image.get_rect().right -= self.speed
         elif(self.direction == 'down'):
-            self.y += self.speed #update position of vehicles moving down to continue to move down 
-            self.vehicleRect.bottom += self.speed
-            #self.image.get_rect().top -= self.speed
+            #self.stopResponse()   
+            #self.yieldResponse()
+            self.speedUpResponse()
+            #self.slowDownResponse()
+            #self.normalResponse()
         elif(self.direction == 'up'):
             self.y -= self.speed #update position of vehicles moving up to continue to move up 
             self.vehicleRect.bottom -= self.speed
-            #self.image.get_rect().top += self.speed
-        #if self.x <0 or self.x > 1400 or self.y < 0 or self.y > 800:
-            #simulation.remove(self)
+        if self.x <0 or self.x > 1400 or self.y < 0 or self.y > 800:
+            simulation.remove(self)
         self.collisionDetection()
     
     #def updateVehicleCount(self):
@@ -109,7 +155,13 @@ class Vehicle(pygame.sprite.Sprite):
     2) each vehicle's vehicleRect attribute is the rectangle object to use for collision detection among all vehicles
     3) each vehicle image (vehicle.image) is connected to its rectangle object (vehicle.vehicleRect) -- specifically the screen.blit part in the main class 
     '''
+    def pause_simulation(self):
+        global simulation_over
+        global collisionCount
+        simulation_over = 1
+        collisionCount += 1
         
+    
     def collisionDetection(self):
         #Here we have two working versions commented below 
         # the first one uses pygame's collidelist function 
@@ -129,7 +181,7 @@ class Vehicle(pygame.sprite.Sprite):
             collisions = vehicle.vehicleRect.collidelist(veh_rectlist)
             if collisions != -1 and vehicle != veh_list[collisions]:
                 print('collision')
-                sys.exit()
+                self.pause_simulation()
         '''
         global collisionCount
         for vehicle in simulation:
@@ -140,6 +192,7 @@ class Vehicle(pygame.sprite.Sprite):
                         print('Collided')
                         sys.exit()
         '''
+    
                                               
 class Main:
     def generateVehicles():
@@ -148,17 +201,28 @@ class Main:
             lane_number = random.randint(1,2) # the lane in particular direction 
             temp = random.randint(0,99)
             direction_number = 0
-            dist= [10,20,60,100]
+            dist= [25,50,75,100]
             if(temp<dist[0]):
                 direction_number = 0
-            elif(temp<dist[1]):
-                direction_number = 1
+            # commented out because don't want vehicles other than cars moving downward
+            #elif(temp<dist[1]):
+                #direction_number = 1
             elif(temp<dist[2]):
                 direction_number = 2
             elif(temp<dist[3]):
                 direction_number = 3
+            # all cars should be moving downward (only cars will be detecting and predicting traffic signs)
+            if vehicle_type == 0:
+                direction_number = 1
+                
             Vehicle(lane_number, vehicleTypes[vehicle_type], direction_number, directionNumbers[direction_number])
-            time.sleep(0.2)
+
+            time.sleep(0.1)
+    
+    # the driving force behind coordinating the display of our simulation 
+    thread2 = threading.Thread(name="generateVehicles",target=generateVehicles, args=())
+    thread2.daemon = True
+    thread2.start()
     
     black = (0, 0, 0)
     white = (255, 255, 255) 
@@ -168,22 +232,60 @@ class Main:
     background = pygame.image.load('images/intersection.png')
     screen = pygame.display.set_mode(screenSize)
     pygame.display.set_caption("TRAFFIC SIMULATION")
+    global simulation_over
     
-    # the driving force behind coordinating the display of our simulation 
-    thread2 = threading.Thread(name="generateVehicles",target=generateVehicles, args=())
-    thread2.daemon = True
-    thread2.start()
+    '''
+        # the driving force behind coordinating the display of our simulation 
+        thread2 = threading.Thread(name="generateVehicles",target=generateVehicles, args=())
+        thread2.daemon = True
+        thread2.start()
+    '''
+    
     firstRun = 0 #to easily be able to add object collision detection 
     list_veh = [] # adding all vehicles
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                sys.exit()
-        
-        screen.blit(background, (0, 0))
-        for vehicle in simulation: 
-            screen.blit(vehicle.image, vehicle.vehicleRect)
-            vehicle.move()
+                    sys.exit() 
+        if simulation_over == 0:
+            screen.blit(background, (0, 0))
+            for vehicle in simulation: 
+                screen.blit(vehicle.image, vehicle.vehicleRect)
+                #pygame.draw.line(screen, pygame.Color('black'), (700, 350), (900, 350)) # as you approach 350 want to stop 
+                if vehicle.direction_number == 1:
+                    pygame.draw.rect(screen, (255,0,0), vehicle.vehicleRect, 4)
+                vehicle.move()
+        else: 
+            green = (255, 255, 255)
+            blue = (0, 0, 0)
+            X = 2200
+            Y = 200
+            endingMsg = pygame.font.Font('freesansbold.ttf', 32)
+            txt = endingMsg.render('Simulation over', True, green, blue)
+            txtRect = txt.get_rect()
+            txtRect.center = (X // 2, Y // 2)
+            screen.blit(txt, txtRect)
+            simulation_over = 1
+                
+            
+            
+            
+            '''
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    sys.exit()
+                if event.type == pygame.KEYUP:
+                    if event.key == pygame.K_SPACE:
+                        simulation_over = 0  
+                        simulation.clear()   
+                        screen.blit(background, (0, 0))
+                        count += 1
+                        print(f'len of simulation is {len(simulation)}')
+            '''
+                        
+            #print(f'Simulation over value is {simulation_over}')
+            
             
         pygame.display.update()
+    startGame(5)
         
