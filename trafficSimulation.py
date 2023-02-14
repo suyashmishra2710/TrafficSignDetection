@@ -126,6 +126,28 @@ class Vehicle(pygame.sprite.Sprite):
         self.y += self.speed 
         self.vehicleRect.bottom += self.speed
     
+    def laneChangeResponse(self):
+        # the striped white squares are at y coordinate 350
+        # so all lane changes, speed changes, etc should occur 
+        # as the image approaches y coordinate of 350
+        if self.y > 340 and self.y < 350 and self.lane == 2:
+            self.x += 33 # for moving from the left lane to the right lane 
+            self.vehicleRect.right += 33 # for moving from the left lane to the right lane 
+            self.vehicleRect.bottom += 10
+            self.y += 10
+            self.lane = 1 # making sure (for later debugging purposes) that the lane car appears in and what's stored here is consistent
+            print(self.lane)
+        elif self.y > 340 and self.y < 350 and self.lane == 1:
+            self.x -= 33 # for moving from the right lane to the left lane 
+            self.vehicleRect.right -= 33 # for moving from the right lane to the left lane 
+            self.vehicleRect.bottom += 10
+            self.y += 10
+            self.lane = 2
+            print(self.lane)
+        else:
+            self.normalResponse()
+            
+    
         
     #updating the coordinates of each vehicle so that simulation has moving vehicles
     def move(self):
@@ -138,9 +160,10 @@ class Vehicle(pygame.sprite.Sprite):
         elif(self.direction == 'down'):
             #self.stopResponse()   
             #self.yieldResponse()
-            self.speedUpResponse()
+            #self.speedUpResponse()
             #self.slowDownResponse()
             #self.normalResponse()
+            self.laneChangeResponse()
         elif(self.direction == 'up'):
             self.y -= self.speed #update position of vehicles moving up to continue to move up 
             self.vehicleRect.bottom -= self.speed
