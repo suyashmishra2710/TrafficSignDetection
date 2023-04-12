@@ -14,8 +14,8 @@ collisionCheckDist = 150 #the number of x,y units that will be checked. Making t
 upDownOffset = 1
 leftRightOffset = 1
 
-speeds = {'car': 2.25, 'bus': 1.8, 'truck': 1.8, 'bike':2.5} #average speed of vehicles 
-#speeds = {'car': 1, 'bus': 1, 'truck': 1, 'bike':1} #average speed of vehicles 
+#speeds = {'car': 2.25, 'bus': 1.8, 'truck': 1.8, 'bike':2.5} #average speed of vehicles 
+speeds = {'car': 2.25, 'bus': 1.5, 'truck': 1.8, 'bike':2.5} #average speed of vehicles 
 x = {'right':[0,0,0], 'down':[755,727,697], 'left':[1400,1400,1400], 'up':[602,627,657]}
 y = {'right':[348,370,398], 'down':[0,0,0], 'left':[498,466,436], 'up':[800,800,800]}
 vehicles = {'right': {0:[], 1:[], 2:[], 'crossed':0}, 'down': {0:[], 1:[], 2:[], 'crossed':0}, 'left': {0:[], 1:[], 2:[], 'crossed':0}, 'up': {0:[], 1:[], 2:[], 'crossed':0}}
@@ -240,6 +240,40 @@ class Vehicle(pygame.sprite.Sprite):
         
     #updating the coordinates of each vehicle so that simulation has moving vehicles
     def move(self, imgPath, pred):
+        checkPossCollison = False
+        for vehicle2 in simulation:
+            if (self.vehicleRect == vehicle2.vehicleRect):
+                    continue
+            if (self.direction == 'up'):
+                checkPossCollison = self.checkUp(self.vehicleRect, vehicle2.vehicleRect)
+            elif (self.direction == 'down'):
+                checkPossCollison = self.checkDown(self.vehicleRect, vehicle2.vehicleRect)
+            elif (self.direction == 'right'):
+                checkPossCollison = self.checkRight(self.vehicleRect, vehicle2.vehicleRect)
+            else:
+                checkPossCollison = self.checkLeft(self.vehicleRect, vehicle2.vehicleRect)
+            if checkPossCollison == True:
+                self.vehicleRect.right += 0
+                vehicle2.vehicleRect.right += 0
+                time.sleep(0.01)
+                return imgPath, pred
+        '''
+        checkPossCollison = False # to get returned from the checkUp, checkDown, checkRight, and left func
+        for vehicle1 in simulation:
+            for vehicle2 in simulation:
+                if (vehicle1 == vehicle2 or vehicle1.lane == vehicle2.lane):
+                    continue
+                if (self.direction == 'up'):
+                    checkPossCollison = self.checkUp(vehicle1.vehicleRect, vehicle2.vehicleRect)
+                elif (self.direction == 'down'):
+                    checkPossCollison = self.checkDown(vehicle1.vehicleRect, vehicle2.vehicleRect)
+                elif (self.direction == 'right'):
+                    checkPossCollison = self.checkRight(vehicle1.vehicleRect, vehicle2.vehicleRect)
+                else:
+                    checkPossCollison = self.checkLeft(vehicle1.vehicleRect, vehicle2.vehicleRect)
+                if checkPossCollison == True:
+                    break
+        '''
         if(self.direction == 'right'):
             self.x += self.speed #update the position of the vehicles that are moving right to keep moving right
             self.vehicleRect.right += self.speed    
@@ -267,6 +301,7 @@ class Vehicle(pygame.sprite.Sprite):
                 imgPath, pred = displayTestImage() 
             simulation.remove(self)
         #self.collisionDetection() #This should do nothing if the collision detections work
+        '''
         for vehicle1 in simulation:
             for vehicle2 in simulation:
                 if (vehicle1 == vehicle2 or vehicle1.lane == vehicle2.lane):
@@ -279,6 +314,7 @@ class Vehicle(pygame.sprite.Sprite):
                     self.checkRight(vehicle1.vehicleRect, vehicle2.vehicleRect)
                 else:
                     self.checkLeft(vehicle1.vehicleRect, vehicle2.vehicleRect)
+        '''
         self.collisionDetection()
         return imgPath, pred
 
@@ -303,16 +339,21 @@ class Vehicle(pygame.sprite.Sprite):
         simulation_over = 3
         #collisionCount += 1
 
+    # all of these checking functions return True if there is a collision that is going to happen 
     def checkUp(self, rect1, rect2):
         for i in range(1, collisionCheckDist):
             if (rect1.y - i == rect2.y and abs(rect1.x - rect2.x) < upDownOffset):
                 print("Possible collision top")
                 self.print_collision_info(rect1, rect2)
+                return True
+        return False
     def checkDown(self, rect1, rect2):
         for i in range(1, collisionCheckDist):
             if (rect1.y + i == rect2.y and abs(rect1.x - rect2.x) < upDownOffset):
                 print("Possible collision back")
                 self.print_collision_info(rect1, rect2)
+                return True
+        return False
 
     #I'm not sure how changing the heading of the car affects things so I added a left and right check.
     def checkRight(self, rect1, rect2):
@@ -320,12 +361,16 @@ class Vehicle(pygame.sprite.Sprite):
             if (rect1.x + i == rect2.x and abs(rect1.y - rect2.y) < leftRightOffset):
                 print("Possible collision right")
                 self.print_collision_info(rect1, rect2)
+                return True 
+        return False
 
     def checkLeft(self, rect1, rect2):
         for i in range(1, collisionCheckDist):
             if (rect1.x - i == rect2.x and abs(rect1.y - rect2.y) < leftRightOffset):
                 print("Possible collision left")
                 self.print_collision_info(rect1, rect2)
+                return True 
+        return False
     
     def print_collision_info(self, rect1, rect2):
         #print("line 241")
