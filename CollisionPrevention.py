@@ -464,7 +464,7 @@ class Main:
                 lastDirection = direction_number
             time.sleep(0.01)
     
-    #get_model_predictions()
+    get_model_predictions()
     imgPath, pred = displayTestImage() #opens up the classes.txt file and returns the file path of the test image to display and prediction from neural network model
     
     # the driving force behind coordinating the display of our simulation 
