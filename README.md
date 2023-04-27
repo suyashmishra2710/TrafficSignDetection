@@ -1,6 +1,8 @@
 # TrafficSignDetection
 
 Steps to Rerun experiment:
+
+
 0) Make sure that the following python libraries are installed: pytorch, pygame, time, random, threading, subprocess, os, and re 
 1) Clone the github repository: git clone https://github.com/mishr100/TrafficSignDetection . Once cloned, there should be a folder called TrafficSignDetection under whichever folder the git clone command was ran from. 
 2) Open up the folder in VSCode. Once the folder has been opened in VSCode, using the terminal window run the following command: python3 CollisionPrevention.py 
